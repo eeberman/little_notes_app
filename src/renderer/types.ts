@@ -1,5 +1,7 @@
 import type { StoredRecord, TaskCategory } from '../main/storage';
+import type { AppCommand } from '../main/launchCommands';
 export type { TaskCategory };
+export type { AppCommand };
 export type RecordStatus = 'open' | 'completed';
 export type GsdRecord = Omit<StoredRecord, 'revision'> & { revision?: string };
 export interface Snapshot { records: GsdRecord[]; issues: string[] }
@@ -11,6 +13,7 @@ export interface GsdApi {
   today(): Promise<GsdRecord>;
   trash(id: string, revision?: string): Promise<string>;
   openDataFolder(): Promise<string>;
+  onCommand(callback: (command: AppCommand) => void): () => void;
   onChanged(callback: () => void): () => void;
   onBeforeClose(callback: () => Promise<boolean>): () => void;
 }

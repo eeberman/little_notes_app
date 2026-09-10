@@ -3,7 +3,7 @@ import { DraftController } from '../src/renderer/controller';
 import type { GsdApi, GsdRecord } from '../src/renderer/types';
 const note = (id: string, body = ''): GsdRecord => ({ id, type:'note', title:id, body, createdAt:'2026-09-09T10:00:00Z', updatedAt:'2026-09-09T10:00:00Z' });
 function api(save: GsdApi['save']): GsdApi {
-  return { save, list:async () => ({ records:[], issues:[] }), read:async id => note(id), search:async () => [], today:async () => note('day'), trash:async () => '', openDataFolder:async () => '', onChanged:() => () => {}, onBeforeClose:() => () => {} };
+  return { save, list:async () => ({ records:[], issues:[] }), read:async id => note(id), search:async () => [], today:async () => note('day'), trash:async () => '', openDataFolder:async () => '', onCommand:() => () => {}, onChanged:() => () => {}, onBeforeClose:() => () => {} };
 }
 test('writes across records and edits during an in-flight save retain the newest body', async () => {
   let release!: () => void;

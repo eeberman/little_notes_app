@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { Storage, RecordConflictError, RecordNotFoundError } from './main/storage';
+import { parseLaunchCommands } from './main/launchCommands';
+import type { AppCommand } from './main/launchCommands';
 import type { GsdRecord } from './renderer/types';
 
 const localRoot = process.env.GSD_DATA_ROOT ?? path.join(process.env.LOCALAPPDATA ?? app.getPath('appData'), 'Getting Stuff Done');
@@ -12,10 +14,28 @@ let mainWindow: BrowserWindow | null = null;
 let allowClose = false;
 let closePending = false;
 let stopWatch: (() => void) | undefined;
+let rendererCommandsReady = false;
+const pendingCommands: AppCommand[] = parseLaunchCommands(process.argv);
+
+function focusMainWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  if (!mainWindow.isVisible()) mainWindow.show();
+  mainWindow.focus();
+}
+
+function deliverPendingCommands() {
+  if (!rendererCommandsReady || !mainWindow || mainWindow.isDestroyed()) return;
+  for (const command of pendingCommands.splice(0)) mainWindow.webContents.send('app:command', command);
+}
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on('second-instance', () => { mainWindow?.restore(); mainWindow?.focus(); });
+  app.on('second-instance', (_event, commandLine) => {
+    pendingCommands.push(...parseLaunchCommands(commandLine));
+    focusMainWindow();
+    deliverPendingCommands();
+  });
   app.whenReady().then(createWindow).catch(console.error);
 }
 async function createWindow() {
@@ -64,6 +84,11 @@ handle('data:open', async () => {
   const error = await shell.openPath(storage.recordsDirectory);
   if (error) throw new Error(`Could not open the notes folder: ${error}`);
   return storage.recordsDirectory;
+});
+ipcMain.on('app:commands-ready', event => {
+  if (event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) return;
+  rendererCommandsReady = true;
+  deliverPendingCommands();
 });
 ipcMain.on('app:close-ready', (event, success: boolean) => {
   if (event.sender !== mainWindow?.webContents) return;

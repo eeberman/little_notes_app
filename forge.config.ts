@@ -4,7 +4,7 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 
 const config = {
-  outDir: 'out-1.0.4',
+  outDir: 'out-1.1.0',
   packagerConfig: {
     asar: true,
     name: 'Getting Stuff Done',

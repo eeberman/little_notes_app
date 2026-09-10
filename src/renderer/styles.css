@@ -66,6 +66,17 @@ h1 { margin: 0; font: 600 21px/1.1 Georgia, serif; letter-spacing: -.02em; }
 .body-input { width: 100%; min-height: 240px; flex: 1; resize: none; border: 0; outline: 0; background: transparent; color: #4b4a45; font: 14px/1.75 Georgia, serif; }
 .body-input::placeholder { color: #b8b6ae; }
 .empty-editor { margin: auto; padding: 30px; color: #99978f; text-align: center; }.empty-editor > div { font-size: 34px; }.empty-editor h2 { margin: 13px 0 5px; color: #55544e; font: 600 19px Georgia, serif; }.empty-editor p { margin: 0 0 17px; font-size: 11px; }.empty-editor button { padding: 7px 13px; border: 1px solid #d6d4cc; border-radius: 6px; background: #fff; font-size: 11px; cursor: pointer; }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: #17181299; }
+.shortcut-dialog { width: min(430px, 100%); padding: 22px; border: 1px solid #d7d5cd; border-radius: 12px; background: #fbfaf7; box-shadow: 0 18px 60px #17181255; }
+.shortcut-dialog header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.shortcut-dialog h2 { margin: 0; font: 600 24px/1.1 Georgia, serif; }
+.dialog-close { width: 32px; height: 32px; border: 1px solid #d7d5cd; border-radius: 7px; background: #fff; color: #6d6c65; font-size: 20px; cursor: pointer; }
+.shortcut-scope { margin: 18px 0 7px; color: #8d8b83; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.shortcut-dialog dl { margin: 0; }
+.shortcut-dialog dl > div { display: flex; align-items: center; justify-content: space-between; min-height: 38px; border-bottom: 1px solid #e8e6df; }
+.shortcut-dialog dt, .shortcut-dialog dd { margin: 0; }
+.shortcut-dialog dd { color: #5f5e57; font-size: 12px; }
+.shortcut-dialog kbd { display: inline-block; min-width: 82px; padding: 4px 7px; border: 1px solid #d2d0c8; border-bottom-width: 2px; border-radius: 5px; background: #f2f1ec; color: #55544e; font-size: 10px; text-align: center; }
 @media (max-width: 920px) { .app-shell { grid-template-columns: 180px 285px minmax(335px, 1fr); }.sidebar { padding-inline: 8px; }.editor-content { padding-inline: 30px; } }
 @media (prefers-color-scheme: dark) {
   :root { color-scheme: dark; color: #e5e3db; background: #20211d; }
@@ -73,5 +84,6 @@ h1 { margin: 0; font: 600 21px/1.1 Georgia, serif; letter-spacing: -.02em; }
   .search-box, .icon-button, .record-row.selected { background: #32332d; border-color: #484941; }.record-row { border-color: #3a3b35; }.record-row:hover { background: #30312c; }
   .record-copy strong, .title-input, .search-box input { color: #e6e4dd; }.editor-toolbar, .title-input { border-color: #3c3d37; }.body-input { color: #cbc9c1; }
   .select-wrap select, .empty-editor button, .empty-list button, .delete-button { background: #31322d; border-color: #494a43; color: #cbc9c1; }.waiting-field { background: #303228; }
+  .shortcut-dialog { border-color: #484941; background: #292a25; }.dialog-close { border-color: #494a43; background: #31322d; color: #cbc9c1; }.shortcut-dialog dl > div { border-color: #3d3e38; }.shortcut-dialog dd { color: #cbc9c1; }.shortcut-dialog kbd { border-color: #55564e; background: #33342e; color: #e1dfd7; }
 }
 .title-input { resize: none; field-sizing: content; overflow: hidden; flex-shrink: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

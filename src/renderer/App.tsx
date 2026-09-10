@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GsdRecord, TaskCategory } from './types';
+import { useEffect, useRef, useState } from 'react';
+import type { AppCommand, GsdRecord, TaskCategory } from './types';
 import { DraftController } from './controller';
 import './styles.css';
 type View = TaskCategory | 'daily' | 'all';
@@ -38,14 +38,20 @@ export default function App() {
   const records = [...store.records.values()];
   const [view, setView] = useState<View>(initialView);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedIdRef = useRef<string | null>(selectedId);
+  selectedIdRef.current = selectedId;
+  const changeSelection = (id: string | null) => { selectedIdRef.current = id; setSelectedId(id); };
   const [query, setQuery] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [localError, setLocalError] = useState('');
   const loadError = localError || store.message;
   const setLoadError = (message: string) => { store.message = ''; setLocalError(message); render(n => n + 1); };
   const saveState = store.error ? 'error' : store.dirty.size ? 'saving' : 'saved';
   const searchRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const pendingTitleFocus = useRef<string | null>(null);
+  const shortcutCloseRef = useRef<HTMLButtonElement>(null);
   const selected = records.find(record => record.id === selectedId) ?? null;
   const visible = records.filter(record => {
     if (!query.trim()) return matchesView(record, view);
@@ -72,44 +78,57 @@ export default function App() {
     try { localStorage.setItem(LAST_VIEW_KEY, view); } catch { /* fall back to All Notes next launch */ }
   }, [view]);
   useEffect(() => {
-    if (!selectedId || !visible.some(record => record.id === selectedId)) setSelectedId(visible[0]?.id ?? null);
+    if (!selectedId || !visible.some(record => record.id === selectedId)) changeSelection(visible[0]?.id ?? null);
   }, [selectedId, visible.map(record => record.id).join(',')]);
+  useEffect(() => {
+    if (selectedId && pendingTitleFocus.current === selectedId && titleRef.current) {
+      titleRef.current.focus();
+      pendingTitleFocus.current = null;
+    }
+  }, [selectedId, selected?.id]);
   const updateSelected = (patch: Partial<GsdRecord>) => {
     if (selected) store.edit({ ...store.records.get(selected.id)!, ...patch, updatedAt: new Date().toISOString() });
   };
   const createRecord = async (kind: 'note' | 'task' = 'note') => {
-    store.discardPristine(selectedId);
+    store.discardPristine(selectedIdRef.current);
     const now = new Date().toISOString();
     const category = kind === 'task' ? (isTaskCategory(view) ? view : 'personal') : undefined;
     const record: GsdRecord = { id: crypto.randomUUID(), type: kind, title: '', body: '', category, status: kind === 'task' ? 'open' : undefined, createdAt: now, updatedAt: now };
     store.addDraft(record);
     setView(kind === 'task' ? category! : 'all');
-    setQuery(''); setSelectedId(record.id);
-    setTimeout(() => titleRef.current?.focus(), 0);
+    pendingTitleFocus.current = record.id;
+    setQuery(''); changeSelection(record.id);
   };
   const openToday = async () => {
     try {
       const daily = await window.gsd.today();
-      if (selectedId !== daily.id) store.discardPristine(selectedId);
-      store.addClean(daily); setView('daily'); setQuery(''); setSelectedId(daily.id);
+      if (selectedIdRef.current !== daily.id) store.discardPristine(selectedIdRef.current);
+      store.addClean(daily); setView('daily'); setQuery(''); changeSelection(daily.id);
     }
     catch(error) { setLoadError(String(error)); }
   };
   const removeSelected = async () => { if (selected) await store.trash(selected.id); };
-  const chooseView = (nextView: View) => { store.discardPristine(selectedId); setView(nextView); setQuery(''); setSelectedId(null); };
-  const selectRecord = (id: string) => { if (id !== selectedId) store.discardPristine(selectedId); setSelectedId(id); };
+  const chooseView = (nextView: View) => { store.discardPristine(selectedIdRef.current); setView(nextView); setQuery(''); changeSelection(null); };
+  const selectRecord = (id: string) => { if (id !== selectedIdRef.current) store.discardPristine(selectedIdRef.current); changeSelection(id); };
   const createForView = () => view === 'daily' ? openToday() : createRecord(isTaskCategory(view) ? 'task' : 'note');
   const openNotesFolder = async () => {
     try { await window.gsd.openDataFolder(); }
     catch (error) { setLoadError(error instanceof Error ? error.message : String(error)); }
   };
+  const runCommand = (command: AppCommand) => command === 'today' ? openToday() : createRecord();
+  useEffect(() => window.gsd.onCommand(command => { void runCommand(command); }));
+  useEffect(() => {
+    if (showShortcuts) shortcutCloseRef.current?.focus();
+  }, [showShortcuts]);
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showShortcuts) { event.preventDefault(); setShowShortcuts(false); return; }
       if (!event.ctrlKey) return;
       const key = event.key.toLowerCase();
-      if (key === 'k') { event.preventDefault(); searchRef.current?.focus(); }
-      if (key === 'n' && !event.shiftKey) { event.preventDefault(); void createRecord(); }
-      if (key === 'd' && event.shiftKey) { event.preventDefault(); void openToday(); }
+      if (key === 'k' && !event.altKey) { event.preventDefault(); searchRef.current?.focus(); }
+      if (key === 'n' && !event.shiftKey && !event.altKey) { event.preventDefault(); void runCommand('new-note'); }
+      if (key === 'd' && event.altKey && !event.shiftKey) { event.preventDefault(); void runCommand('today'); }
+      if (key === '/') { event.preventDefault(); setShowShortcuts(true); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -130,8 +149,9 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-spacer" />
-        <button className="sidebar-action" onClick={() => void openToday()}><span>＋</span> Today <kbd>Ctrl Shift D</kbd></button>
+        <button className="sidebar-action" onClick={() => void openToday()}><span>＋</span> Today <kbd>Ctrl Alt D</kbd></button>
         <button className="sidebar-action" onClick={() => void openNotesFolder()}><span>↗</span> Open notes folder</button>
+        <button className="sidebar-action" aria-label="Keyboard shortcuts" onClick={() => setShowShortcuts(true)}><span>?</span> Keyboard shortcuts <kbd>Ctrl /</kbd></button>
       </aside>
 
       <section className="record-list">
@@ -197,6 +217,17 @@ export default function App() {
           <div className="empty-editor"><div>◇</div><h2>Select something to work on</h2><p>Choose an item from the list, or create a new one.</p><button onClick={() => void createForView()}>Create new</button></div>
         )}
       </section>
+      {showShortcuts && (
+        <div className="dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setShowShortcuts(false); }}>
+          <section className="shortcut-dialog" role="dialog" aria-modal="true" aria-labelledby="shortcut-dialog-title">
+            <header><div><p className="eyebrow">KEYBOARD</p><h2 id="shortcut-dialog-title">Shortcuts</h2></div><button ref={shortcutCloseRef} className="dialog-close" aria-label="Close shortcuts" onClick={() => setShowShortcuts(false)}>×</button></header>
+            <p className="shortcut-scope">Capture from anywhere in Windows</p>
+            <dl><div><dt><kbd>Ctrl Alt G</kbd></dt><dd>Open a new note</dd></div><div><dt><kbd>Ctrl Alt D</kbd></dt><dd>Open today’s daily note</dd></div></dl>
+            <p className="shortcut-scope">While the app is active</p>
+            <dl><div><dt><kbd>Ctrl N</kbd></dt><dd>Open a new note</dd></div><div><dt><kbd>Ctrl K</kbd></dt><dd>Focus search</dd></div><div><dt><kbd>Ctrl /</kbd></dt><dd>Show this guide</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Close this guide</dd></div></dl>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

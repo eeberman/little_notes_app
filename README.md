@@ -1,15 +1,46 @@
 # Getting Stuff Done
 
-A Windows desktop app for your to-dos, searchable notes, and daily log. Open **Getting Stuff Done** from the desktop shortcut. Your 11 original tasks are provisioned locally.
+Getting Stuff Done is a local-first Windows desktop app for tasks, ordinary notes, and dated daily notes. It is implemented with Electron, React, and TypeScript. Markdown files on the user's machine are the source of truth; the app requires no account, server, internet connection, or built-in AI.
 
-- Use Personal, Work (urgent), and Work (thoughts) for tasks.
-- Press **Ctrl+N** for a note, **Ctrl+K** to search everything, and **Ctrl+Shift+D** for today's log. The Daily Notes **+** button opens today's dated page.
-- Edits save automatically. Blank new notes disappear when you leave them; **Delete** moves saved notes to local trash.
-- The app remembers the last selected list, so reopening it returns you to the notes or task list you were using.
-- **Open notes folder** shows your Markdown files. Back up the whole data folder with the app closed.
+## Use the installed local build
 
-[Launch, development, backup and restoration](docs/WORKFLOWS.md) · [Current status](docs/STATUS.md) · [Verification](docs/ACCEPTANCE.md)
+Open the **Getting Stuff Done** desktop shortcut. It targets the packaged 1.1.0 executable kept in this repository's `out-1.1.0` directory.
 
-For a fresh agent, start with [AGENTS.md](AGENTS.md), then follow the written [handoff](docs/HANDOFF.md). [Requirements](docs/SPEC.md), [decisions and tradeoffs](docs/DECISIONS.md), and [work history](docs/WORKLOG.md) provide the project context.
+- `Ctrl+Alt+G` works anywhere in Windows to open a fresh ordinary note.
+- `Ctrl+Alt+D` works anywhere in Windows to open or create today's daily page.
+- `Ctrl+K` focuses global search.
+- `Ctrl+N` creates an ordinary note.
+- `Ctrl+/` opens the shortcut guide; Escape closes it.
+- Edits autosave. A pristine blank draft disappears when you leave it.
+- **Delete** discards a pristine blank draft or moves a saved/contentful note to local trash.
+- **Open notes folder** opens the Markdown record directory.
 
-The application runs locally without an account or built-in AI. Personal seed data is excluded from application packages.
+The ordinary desktop icon remains a normal launcher. The two global keys are backed by action launchers in the user's Start Menu and work whether the app is closed, minimized, or behind another window.
+
+## Develop
+
+Run commands from this directory in PowerShell:
+
+```powershell
+./scripts/dev.ps1 install
+./scripts/dev.ps1 typecheck
+./scripts/dev.ps1 test
+./scripts/dev.ps1 start
+./scripts/dev.ps1 make
+./scripts/dev.ps1 smoke
+```
+
+The wrapper uses the bundled Codex Node runtime when present and otherwise uses Node 22+ and pnpm 11 from `PATH`. Tests and smoke runs use synthetic data; never point them at the default notebook.
+
+## Project documentation
+
+A new LLM starts at [AGENTS.md](AGENTS.md) and follows [the cold-start handoff](docs/HANDOFF.md). The remaining documents each have one job:
+
+- [STATUS](docs/STATUS.md): what is true now and what to do next.
+- [SPEC](docs/SPEC.md): required behavior and scope.
+- [DECISIONS](docs/DECISIONS.md): architecture and tradeoffs.
+- [WORKFLOWS](docs/WORKFLOWS.md): commands, data contracts, release, backup, and recovery.
+- [ACCEPTANCE](docs/ACCEPTANCE.md): verified release evidence.
+- [WORKLOG](docs/WORKLOG.md): concise history.
+
+Source is published at <https://github.com/eeberman/little_notes_app>. Personal `.local` content, runtime notes, dependencies, and generated packages are excluded from Git.

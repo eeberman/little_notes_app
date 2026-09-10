@@ -1,22 +1,35 @@
 # Workflows and contracts
 
-## Start using the app
-Open the **Getting Stuff Done** desktop shortcut. It targets the portable 1.0.4 executable in `out-1.0.4/Getting Stuff Done-win32-x64/Getting Stuff Done.exe` under this project. Keep the entire folder together; the executable needs its adjacent files. A ZIP and optional Squirrel installer are produced by `make`. No server, account, terminal or internet is required for normal use.
+Use only the section relevant to the task. STATUS owns current version/path facts; this document owns procedures and data contracts.
 
-Use the three task lists on the left. The plus button adds a task in a task list or an ordinary note in All Notes. In Daily Notes, plus opens today's dated page. Click an item to edit its title/body; task fields include List, Waiting on and Complete/Reopen. Completed tasks appear under the expandable Completed section. The visible Delete button moves saved notes to local trash.
+## Use the app
 
-Ctrl+K focuses search across every category, ordinary note and daily note, including completed tasks. Search matches all whitespace-separated terms against title, body and waiting-on text. Ctrl+N creates an ordinary note. Ctrl+Shift+D, Today, or plus within Daily Notes opens the page for today's local calendar date. Repeated Today uses the same page; past daily notes remain editable. All Notes includes ordinary and daily notes; tasks remain in their named lists.
+Open **Getting Stuff Done** from the desktop shortcut. The portable executable needs the adjacent files in its unpacked output directory, so keep that whole directory intact. Normal use is local and offline.
 
-The selected navigation list is remembered across a normal close/reopen. If you close while viewing All Notes, the next launch returns to All Notes. Search text and the selected record are intentionally not persisted.
+The sidebar contains Personal, Work (urgent), Work (thoughts), Daily Notes, and All Notes. A task-list plus creates a task in that category; All Notes plus creates an ordinary note; Daily Notes plus opens today's page. Completed tasks live under the expandable Completed section.
 
-The first record read displays Loading notes rather than an empty-notebook claim. Empty snapshots receive bounded backoff retries over several seconds, and returning focus to the app refreshes the list. A confirmed empty view includes Reload notes for an explicit retry.
+Current keyboard commands:
 
-New ordinary notes and never-edited daily pages are transient. If you leave one blank, it disappears without creating a file. Once text is entered, autosave creates the Markdown record. Delete discards a blank unsaved note immediately; contentful or already-saved notes are preserved under `data\trash`.
+| Command | Action |
+| --- | --- |
+| `Ctrl+Alt+G` | From anywhere in Windows, launch or raise the app and open a fresh ordinary note. |
+| `Ctrl+Alt+D` | From anywhere in Windows, launch or raise the app and open/reuse today's daily note. |
+| `Ctrl+K` | Focus global search. |
+| `Ctrl+N` | Create an ordinary note. |
+| `Ctrl+/` | Open the shortcut guide. |
+| `Escape` | Close the shortcut guide. |
 
-Edits save after 550 ms idle per record. You can switch records while saving. The save indicator reflects pending writes; a failed save retains drafts and offers Retry saving. Closing waits for all writes to succeed. If a write fails, the app stays open. Avoid force-quitting with unsaved drafts.
+The ordinary desktop shortcut has no hotkey. The two Windows-wide keys belong to action launchers under the Start Menu's `Programs\Getting Stuff Done` folder. They launch the same packaged executable with `--new-note` or `--today`; the existing instance restores and handles the command if the app is already running.
 
-## Development commands
-Run from the project in PowerShell. The wrapper finds this machine's bundled Node/pnpm and sets PATH for child processes; otherwise install Node 22 or later and pnpm 11 on PATH. The installed runtime here is under `%USERPROFILE%/.cache/codex-runtimes/codex-primary-runtime/dependencies/node`. Keep `pnpm-lock.yaml`, `pnpm-workspace.yaml` and `.npmrc` with the project. pnpm's hoisted node linker is required by Forge.
+Search matches every whitespace-separated term, case-insensitively, across title, body, and waiting-on text. Search includes all record types and completed tasks. All Notes includes ordinary and daily notes; tasks stay in their category views.
+
+Edits autosave after 550 ms idle per record. Switching records is safe. Closing waits for all pending writes; a failed flush keeps the app open and exposes retry. A new ordinary note or daily shell is not persisted until edited. Leaving a pristine draft discards it. Delete moves saved/contentful records to `data\trash`.
+
+The last navigation view survives a normal restart. Search text and record selection do not. Initial empty snapshots retry for about 6.7 seconds total; app focus/visibility triggers refresh, and a confirmed empty view offers Reload notes.
+
+## Development
+
+Run from the repository root in PowerShell. `scripts/dev.ps1` uses this machine's bundled Codex Node runtime when present; otherwise install Node 22+ and pnpm 11. Keep the lockfile, workspace YAML, and `.npmrc`; Forge requires the configured hoisted pnpm linker.
 
 ```powershell
 ./scripts/dev.ps1 install
@@ -28,45 +41,104 @@ Run from the project in PowerShell. The wrapper finds this machine's bundled Nod
 ./scripts/dev.ps1 smoke
 ```
 
-Install uses the lockfile. Initial downloads require network access. Electron/esbuild/electron-winstaller lifecycle builds are explicitly allowed in pnpm workspace configuration. `package` creates the unpacked Windows executable folder; `make` rebuilds it and produces a ZIP and Squirrel installer beneath the configured Forge output directory (`out-1.0.4` for the current release). `smoke` requires that current packaged folder. Run typecheck/tests before make, and smoke after make whenever app code changes.
+`install` uses the frozen lockfile. Initial dependency downloads require network access. `start` launches a development build. `package` produces the unpacked app. `make` rebuilds it and produces the portable folder, ZIP, and Squirrel installer. `smoke` expects the versioned executable path hard-coded in `scripts/smoke.ts`.
 
-The restricted agent shell can reject Node worker/child processes with `spawn EPERM`; rerun the same local test/build command with approved process permissions. This is a tooling failure, not a test pass. Do not disable Windows security settings.
+Restricted agent shells may fail Node worker or Electron child-process launches with `spawn EPERM`. Retry the same command with approved process permissions; an EPERM launch failure is not a test result.
+
+## Verification and release
+
+For renderer, main-process, or storage changes:
+
+1. Add or update the smallest regression at the owning seam.
+2. Run `./scripts/dev.ps1 typecheck` and `./scripts/dev.ps1 test`.
+3. Bump `package.json` for a release and change both `forge.config.ts` `outDir` and the executable path in `scripts/smoke.ts` to the same version.
+4. Run `./scripts/dev.ps1 make`, then `./scripts/dev.ps1 smoke`.
+5. Inspect the generated ASAR. It should contain only `.vite` output and `package.json`:
+
+```powershell
+./node_modules/.bin/asar.ps1 list 'out-X.Y.Z/Getting Stuff Done-win32-x64/resources/app.asar'
+```
+
+6. Verify the ZIP and installer exist beneath `out-X.Y.Z/make`.
+7. Update the desktop and Start Menu shortcuts only after the packaged smoke passes. In an agent sandbox, these locations may require explicit permission.
+8. Record actual evidence in ACCEPTANCE and WORKLOG, current facts in STATUS, and run a cold-start audit from AGENTS without relying on chat.
+
+Create or update all three shortcuts from the repository root:
+
+```powershell
+.\scripts\update-shortcuts.ps1 -Version 'X.Y.Z'
+```
+
+The script verifies the packaged executable before writing, preserves the ordinary no-argument/no-hotkey desktop launcher, and reads back the target, arguments, working directory, and hotkey for both Start Menu action launchers.
+
+Keep old versioned output directories for rollback until the new shortcut launch is verified. Do not stop a running old build just to package; build side by side and ask the user to close and reopen normally.
 
 ## Seed and test isolation
-The original 11 tasks live in `.local/seed.json`, ignored by Git and excluded from packaging. Provision this machine once using:
+
+The user's original task seed lives at ignored `.local/seed.json`. Provision it only when explicitly needed:
 
 ```powershell
 ./scripts/dev.ps1 seed
 ```
 
-It creates stable IDs `initial-01` through `initial-11`. Existing records are preserved, and `data/.seed-v1.json` marks completion. Repeating the command after success does nothing, including after a user deletes a seed task. A partially interrupted seed can be rerun before the marker exists without overwriting existing records. Never remove the marker to refresh user content.
+The script creates stable IDs `initial-01` through `initial-11`, preserves existing records, and writes `data/.seed-v1.json` after success. Rerunning after the marker exists changes nothing, including after a user deletes a seed task. Never remove the marker to refresh content.
 
-`GSD_DATA_ROOT` overrides the application root (the `data` folder lives beneath it), for both executable and seed script. The smoke script sets this to a fresh `.local/smoke-*` directory containing only synthetic data. It uses Playwright's Electron integration, switches the browser context offline, tests the packaged renderer, and records `result.json` plus a screenshot there. Failed runs preserve evidence in `.local/smoke-failure.png`. It never modifies the real user's notebook.
+`GSD_DATA_ROOT` overrides the application root. Unit tests use temporary OS directories. The packaged smoke creates a fresh `.local/smoke-*` root, seeds only synthetic records, sets the renderer offline, and writes result/screenshot evidence there. Automated writes must never target the default `%LOCALAPPDATA%\Getting Stuff Done` root.
 
-## File format and application boundary
-Default root: `%LOCALAPPDATA%/Getting Stuff Done`. Runtime files are under `data/records`, `data/recovery`, and `data/trash`. **Open notes folder** opens `data/records` directly. Each record is UTF-8 Markdown with YAML front matter. The application writes quoted scalar metadata; ordinary YAML strings are accepted. The Markdown body remains plain editable text.
+## File format and process boundary
 
-Required metadata: `id`, `type` (`task`, `note`, `daily`), `title`, `createdAt`, `updatedAt` (ISO timestamps). Tasks also have `category` (`personal`, `work-urgent`, `work-thoughts`), `status` (`open`, `completed`), and optional `waitingOn`. Supported fields are rewritten when saved; keep extra information in the body. Filenames must equal metadata ID plus `.md`. Daily IDs/filenames use local `YYYY-MM-DD`; ordinary and task IDs are stable random IDs, except initial seeded tasks. Titles may contain Windows-invalid filename characters because they do not control filenames.
+Default runtime root: `%LOCALAPPDATA%\Getting Stuff Done`. Files live in:
 
-A SHA-256 hash of the full file is the transient revision, never a persisted field. Main-process Storage validates records, serializes app writes per ID, writes/fsyncs a temporary file, and renames it into place. Before replacing a record it retains the previous version in `recovery/<id>.md`. Search uses loaded records; the filesystem is authoritative. A directory watcher refreshes the renderer. Malformed records remain untouched and appear as error messages while valid records stay usable.
+- `data\records`: authoritative Markdown records.
+- `data\recovery`: previous successful versions.
+- `data\trash`: timestamped deleted records.
+- `data\.seed-v1.json`: local seed-completion marker.
 
-The isolated preload exposes typed `GsdApi` from `src/renderer/types.ts`: list returns records/issues; read/search/today return records; save returns record/conflict; trash takes ID/revision; openDataFolder opens the fixed data directory; onChanged signals reload; onBeforeClose returns whether flush succeeded. Renderer code has no Node filesystem access. Main validates sender identity; new windows and arbitrary navigation are blocked. One app instance owns a data root at a time.
+Each record is UTF-8 Markdown with YAML front matter. Filenames equal metadata `id` plus `.md`. Daily IDs and filenames are local `YYYY-MM-DD`; tasks and ordinary notes use stable random IDs except seeded tasks.
 
-Clean external edits reload automatically, and externally deleted clean records disappear. Dirty external changes keep the draft. On stale save or deletion of its original file, the entire submitted draft is saved as a separate ordinary note named `(conflict copy)`; task category/status/dependency are included in the copy's body. The external original stays intact. Find the copy in All Notes and reconcile manually. Save errors retain the in-memory draft for retry. Local writes are serialized, but an unrelated external editor does not participate in the application's lock; avoid simultaneously saving the same file from two tools.
+Required fields:
+
+- `id`
+- `type`: `task`, `note`, or `daily`
+- `title`
+- `createdAt` and `updatedAt`: ISO timestamps
+
+Task-only fields:
+
+- `category`: `personal`, `work-urgent`, or `work-thoughts`
+- `status`: `open` or `completed`
+- optional `waitingOn`
+
+The Markdown body is plain editable text. Valid YAML scalars are accepted. App saves rewrite supported metadata; place custom durable information in the body. Titles do not control filenames, so Windows-invalid title characters are allowed.
+
+The main-process store calculates a SHA-256 revision from full file content, serializes writes by ID, writes and fsyncs a temporary file, then renames it into place. Before replacement it retains `recovery/<id>.md`. Malformed files stay untouched and appear as issues while valid records remain usable. A directory watcher notifies the renderer of external changes.
+
+The preload exposes typed `GsdApi`: `list`, `read`, `save`, `search`, `today`, `trash`, `openDataFolder`, `onCommand`, `onChanged`, and `onBeforeClose`. The renderer has no direct filesystem or Node access. Launch commands are limited to `new-note` and `today`.
+
+Clean external edits reload. Dirty stale saves produce a separate ordinary `(conflict copy)` while the external original remains. If the original was a task, category, status, and waiting-on data are placed in the copy body. Reconcile manually in All Notes. Avoid saving the same file simultaneously in the app and an unrelated editor.
+
+## Diagnose missing notes before recovery
+
+An empty UI or Explorer view is not proof of deletion. Keep diagnosis read-only:
+
+1. Confirm the running executable/version and desktop-shortcut target.
+2. List `%LOCALAPPDATA%\Getting Stuff Done\data\records` from PowerShell and a second independent view if necessary.
+3. Inspect `data\trash`, `data\recovery`, and malformed-record messages without moving files.
+4. Launch the packaged app against a synthetic root to separate application behavior from the default notebook.
+5. Change or restore data only after identifying the exact failure and receiving authority for the mutation.
 
 ## Backup and restore
-Close the app successfully, then copy the entire `data` folder to your chosen backup location, including hidden seed marker, recovery and trash. Local recovery copies protect against the previous edit only and are not a separate-device backup.
 
-To restore a full backup: close the app; preserve the current data folder under a new name before copying the backup into `data`; then reopen. Keep the current folder until the restored data is verified. Never merge over newer records without comparing them.
+For a full backup, close the app successfully and copy the entire `data` folder, including `records`, `recovery`, `trash`, and the seed marker. Recovery copies are only the previous version; they are not a separate-device backup.
 
-To restore one recovery/trash item: close the app and copy the current record to a safe location first. Read the candidate's front-matter `id`; copy it into `records/<id>.md`. Recovery filenames already match; trash filenames include a timestamp suffix that must be removed in the restored filename. Do not change the metadata ID to match the timestamped trash name. Reopen and inspect content. For comparison without replacing the original, create a new ordinary note and paste the desired body.
+For a full restore, close the app, preserve the current `data` folder under a new name, copy the backup into `data`, reopen, and verify before removing anything. Never merge over newer records without comparison.
+
+For one recovery or trash item, close the app and preserve the current target record first. Read the candidate's front-matter `id`, then copy it to `records/<id>.md`. Recovery filenames already match. Trash filenames include a timestamp suffix that must be removed from the restored filename; do not change the metadata ID to the trash filename. To compare without replacement, create a new ordinary note and paste the candidate body.
 
 ## Troubleshooting
-- Save failed: keep the window open, free disk space or restore write access, then Retry saving. Copy important unsaved text elsewhere before any force quit.
-- Malformed file: use the displayed path; fix front matter and filename/ID match in an external editor, or restore a backup. Valid notes remain available.
-- Conflict copy: compare the copy in All Notes with the external original and retain the desired text.
-- Missing executable: run make; keep the unpacked folder intact and recreate the shortcut if the project was moved.
-- Missing seed: personal `.local` content is intentionally absent from distributed packages. Generic packages start empty; only this local project has the original seed.
 
-## Delivery evidence
-Current outcomes and exact evidence locations are recorded in STATUS and ACCEPTANCE. WORKLOG preserves failures and fixes; DECISIONS explains tradeoffs. Update these records when changing behavior or delivery artifacts.
+- **Save failed:** keep the window open, resolve disk space or access, and choose Retry saving. Copy important unsaved text elsewhere before force-quitting.
+- **Malformed file:** use the displayed path and repair the front matter or filename-ID match externally, or restore a known copy. Valid records remain usable.
+- **Conflict copy:** compare it with the external original and keep the desired content.
+- **Missing executable:** rebuild with `make`, preserve the unpacked folder, and update the desktop shortcut.
+- **Missing seed:** generic clones and packages intentionally omit personal `.local` content; only provision from the authorized local seed.

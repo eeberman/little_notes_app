@@ -1,7 +1,7 @@
 {
   "name": "getting-stuff-done",
   "productName": "Getting Stuff Done",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "A fast local-first task and notes desktop app",
   "author": "Getting Stuff Done",
   "main": ".vite/build/main.js",

@@ -8,6 +8,12 @@ const api: GsdApi = {
   today: () => ipcRenderer.invoke('records:today'),
   trash: (id, revision) => ipcRenderer.invoke('records:trash', id, revision),
   openDataFolder: () => ipcRenderer.invoke('data:open'),
+  onCommand: callback => {
+    const handler = (_event: Electron.IpcRendererEvent, command: Parameters<typeof callback>[0]) => callback(command);
+    ipcRenderer.on('app:command', handler);
+    ipcRenderer.send('app:commands-ready');
+    return () => { ipcRenderer.removeListener('app:command', handler); };
+  },
   onChanged: callback => {
     const handler = () => callback();
     ipcRenderer.on('records:changed', handler);
