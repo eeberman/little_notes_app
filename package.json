@@ -1,0 +1,40 @@
+{
+  "name": "getting-stuff-done",
+  "productName": "Getting Stuff Done",
+  "version": "1.0.4",
+  "description": "A fast local-first task and notes desktop app",
+  "author": "Getting Stuff Done",
+  "main": ".vite/build/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron-forge start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "seed": "tsx scripts/provision-seed.ts",
+    "smoke": "tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@electron-forge/plugin-vite": "^7.8.3",
+    "electron-squirrel-startup": "^1.0.1",
+    "gray-matter": "^4.0.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.8.3",
+    "@electron-forge/maker-squirrel": "^7.8.3",
+    "@electron-forge/maker-zip": "^7.8.3",
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^4.5.2",
+    "electron": "^37.4.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3",
+    "vite": "^7.1.2",
+    "vitest": "^3.2.4"
+  }
+}

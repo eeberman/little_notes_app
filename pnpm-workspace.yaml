@@ -1,0 +1,10 @@
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+onlyBuiltDependencies:
+  - electron
+  - electron-winstaller
+  - esbuild
+confirmModulesPurge: false
+nodeLinker: hoisted
